@@ -1,0 +1,63 @@
+from tkinter import messagebox
+from datetime import datetime
+
+class Fahrzeug:
+    def __init__(self, id, marke, modell, baujahr, kilometerstand, kraftstoffstand=None):
+        self.id = id
+        self.marke = marke
+        self.modell = modell
+        self.baujahr = baujahr
+        self.kilometerstand = kilometerstand
+        self.kraftstoffstand = kraftstoffstand if kraftstoffstand is not None else 0
+        self.tankungen = []
+
+    def fahren(self, km):
+        self.kilometerstand += km
+        print(f"{self.marke} {self.modell} fährt {km} km")
+
+    def tanken(self, liter, art):
+        if self.kraftstoffstand is not None:
+            self.kraftstoffstand += liter
+            self.tankungen.append((datetime.now(), liter, art))
+            print(f"{liter} Liter {art} getankt.")
+
+    def bremsen(self):
+        print(f"{self.marke} {self.modell} bremst.")
+
+    def hupen(self):
+        print(f"{self.marke} {self.modell} hupt.")
+
+class PKW(Fahrzeug):
+    def __init__(self, id, marke, modell, baujahr, kilometerstand, kraftstoffstand, anzahl_tueren):
+        super().__init__(id, marke, modell, baujahr, kilometerstand, kraftstoffstand)
+        self.anzahl_tueren = anzahl_tueren
+
+    def tanken(self, liter, art):
+        super().tanken(liter, art)
+        print(f"{liter} Liter {art} für PKW getankt.")
+
+class LKW(Fahrzeug):
+    def __init__(self, id, marke, modell, baujahr, kilometerstand, kraftstoffstand, ladungskapazitaet):
+        super().__init__(id, marke, modell, baujahr, kilometerstand, kraftstoffstand)
+        self.ladungskapazitaet = ladungskapazitaet
+
+    def tanken(self, liter, art):
+        super().tanken(liter, art)
+        print(f"{liter} Liter {art} für LKW getankt.")
+
+class Motorrad(Fahrzeug):
+    def __init__(self, id, marke, modell, baujahr, kilometerstand, hubraum):
+        super().__init__(id, marke, modell, baujahr, kilometerstand)
+        self.hubraum = hubraum
+
+    def tanken(self, liter, art):
+        super().tanken(liter, art)
+        print(f"{liter} Liter {art} für Motorrad getankt.")
+
+class Fahrrad(Fahrzeug):
+    def __init__(self, id, marke, modell, baujahr, kilometerstand, ganganzahl):
+        super().__init__(id, marke, modell, baujahr, kilometerstand)
+        self.ganganzahl = ganganzahl
+
+    def tanken(self, liter=None, art=None):
+        messagebox.showwarning("Nicht unterstützte Aktion", "Fahrrad kann nicht getankt werden.")
