@@ -1,14 +1,18 @@
 import tkinter as tk
 from tkinter import messagebox
-from main import Fahrzeug, PKW, LKW, Motorrad, Fahrrad
-
+import datetime
+import re
+from classes import Fahrzeug, PKW, LKW, Motorrad, Fahrrad
 
 class FahrzeugVerwaltungGUI:
+
     def __init__(self, root):
         self.root = root
         self.root.title("Fahrzeugverwaltung")
 
-        # Menüleiste
+        self.fuhrpark = []
+        self.id_counter = 1
+
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
 
@@ -16,11 +20,12 @@ class FahrzeugVerwaltungGUI:
         menubar.add_cascade(label="Datei", menu=file_menu)
         file_menu.add_command(label="Beenden", command=self.root.quit)
 
-        # Frame für neues Fahrzeug hinzufügen
-        self.add_frame = tk.LabelFrame(root, text="Neues Fahrzeug hinzufügen")
+        self.create_main_widgets()
+
+    def create_main_widgets(self):
+        self.add_frame = tk.LabelFrame(self.root, text="Neues Fahrzeug hinzufügen")
         self.add_frame.pack(padx=10, pady=10)
 
-        # Eingabefelder für allgemeine Fahrzeugdaten
         tk.Label(self.add_frame, text="Marke:").grid(row=0, column=0)
         tk.Label(self.add_frame, text="Modell:").grid(row=1, column=0)
         tk.Label(self.add_frame, text="Baujahr:").grid(row=2, column=0)
@@ -32,35 +37,58 @@ class FahrzeugVerwaltungGUI:
         self.modell_entry.grid(row=1, column=1)
         self.baujahr_entry = tk.Entry(self.add_frame)
         self.baujahr_entry.grid(row=2, column=1)
-        self.kmstand_entry = tk.Entry(self.add_frame)
-        self.kmstand_entry.grid(row=3, column=1)
+        self.kilometerstand_entry = tk.Entry(self.add_frame)
+        self.kilometerstand_entry.grid(row=3, column=1)
 
-        # Dropdown-Menü für Fahrzeugtyp
         self.typ_var = tk.StringVar()
-        self.typ_var.set("PKW")  # Standardwert ist PKW
+        self.typ_var.set("PKW")
         tk.Label(self.add_frame, text="Typ:").grid(row=4, column=0)
-        tk.OptionMenu(self.add_frame, self.typ_var, "PKW", "LKW", "Motorrad", "Fahrrad", command=self.typ_auswahl).grid(
-            row=4, column=1)
+        tk.OptionMenu(self.add_frame, self.typ_var, "PKW", "LKW", "Motorrad", "Fahrrad", command=self.typ_auswahl).grid(row=4, column=1)
 
         self.spezifische_felder = {}
 
-        # Button zum Hinzufügen eines Fahrzeugs
         self.hinzufuegen_button = tk.Button(self.add_frame, text="Hinzufügen", command=self.neues_fahrzeug_hinzufuegen)
         self.hinzufuegen_button.grid(row=5, columnspan=2, pady=10)
 
-    def typ_auswahl(self, typ):
-        # Entferne alte spezifische Felder
-        for widget in self.spezifische_felder.values():
-            widget.destroy()
-        self.spezifische_felder = {}
+        self.typ_auswahl(self.typ_var.get())
 
+        self.tanken_button = tk.Button(self.root, text="Tanken", command=self.tanken_dialog)
+        self.tanken_button.pack(padx=10, pady=10)
+
+        self.anzeigen_button = tk.Button(self.root, text="Alle Fahrzeuge anzeigen", command=self.alle_fahrzeuge_anzeigen)
+        self.anzeigen_button.pack(padx=10, pady=10)
+
+        self.treibstoff_statistik_button = tk.Button(self.root, text="Treibstoffstatistik anzeigen", command=self.treibstoff_statistik_anzeigen)
+        self.treibstoff_statistik_button.pack(padx=10, pady=10)
+
+        self.filtern_frame = tk.LabelFrame(self.root, text="Filtern")
+        self.filtern_frame.pack(padx=10, pady=10)
+
+        self.filter_typ_var = tk.StringVar()
+        self.filter_typ_var.set("Alle")
+        tk.Label(self.filtern_frame, text="Nach Typ filtern:").grid(row=0, column=0)
+        tk.OptionMenu(self.filtern_frame, self.filter_typ_var, "Alle", "PKW", "LKW", "Motorrad", "Fahrrad").grid(row=0, column=1)
+
+        self.filtern_button = tk.Button(self.filtern_frame, text="Filtern", command=self.filtern)
+        self.filtern_button.grid(row=1, columnspan=2, pady=10)
+
+    def clear_window(self, window):
+        window.destroy()
+
+    def typ_auswahl(self, typ):
         # Erzeuge neue spezifische Felder basierend auf dem ausgewählten Typ
+        for widget in self.add_frame.grid_slaves():
+            if int(widget.grid_info()["row"]) > 5:
+                widget.grid_forget()
+
+        self.spezifische_felder.clear()
+
         if typ == "PKW":
-            tk.Label(self.add_frame, text="Anzahl Türen:").grid(row=6, column=0)
+            tk.Label(self.add_frame, text="Anzahl Tueren:").grid(row=6, column=0)
             self.spezifische_felder['anzahl_tueren'] = tk.Entry(self.add_frame)
             self.spezifische_felder['anzahl_tueren'].grid(row=6, column=1)
         elif typ == "LKW":
-            tk.Label(self.add_frame, text="Ladungskapazität:").grid(row=6, column=0)
+            tk.Label(self.add_frame, text="Ladungskapazitaet:").grid(row=6, column=0)
             self.spezifische_felder['ladungskapazitaet'] = tk.Entry(self.add_frame)
             self.spezifische_felder['ladungskapazitaet'].grid(row=6, column=1)
         elif typ == "Motorrad":
@@ -68,76 +96,216 @@ class FahrzeugVerwaltungGUI:
             self.spezifische_felder['hubraum'] = tk.Entry(self.add_frame)
             self.spezifische_felder['hubraum'].grid(row=6, column=1)
         elif typ == "Fahrrad":
-            tk.Label(self.add_frame, text="Anzahl Gänge:").grid(row=6, column=0)
+            tk.Label(self.add_frame, text="Ganganzahl:").grid(row=6, column=0)
             self.spezifische_felder['ganganzahl'] = tk.Entry(self.add_frame)
             self.spezifische_felder['ganganzahl'].grid(row=6, column=1)
 
-        # Button-Position anpassen
-        self.hinzufuegen_button.grid(row=7, columnspan=2, pady=10)
-
     def neues_fahrzeug_hinzufuegen(self):
-        marke = self.marke_entry.get()
-        modell = self.modell_entry.get()
-        baujahr = self.baujahr_entry.get()
-        kmstand = self.kmstand_entry.get()
+        # Eingabewerte abfragen und Validierung
+        marke = self.marke_entry.get().strip()
+        modell = self.modell_entry.get().strip()
+        baujahr = self.validate_baujahr(self.baujahr_entry.get().strip())
+        kilometerstand = self.validate_kilometerstand(self.kilometerstand_entry.get().strip())
         typ = self.typ_var.get()
 
-        # Validiere Eingaben
-        if not all([marke, modell, baujahr, kmstand]):
-            messagebox.showwarning("Fehler", "Bitte füllen Sie alle Felder aus.")
-            return
+        if marke and modell and baujahr is not None and kilometerstand is not None:
+            # Spezifische Werte basierend auf dem Fahrzeugtyp abfragen und Fahrzeug erstellen
+            if typ == "PKW":
+                anzahl_tueren = self.validate_anzahl_tueren(self.spezifische_felder.get('anzahl_tueren', None))
+                if anzahl_tueren is not None:
+                    fahrzeug = PKW(self.id_counter, marke, modell, baujahr, kilometerstand, 0, anzahl_tueren)
+            elif typ == "LKW":
+                ladungskapazitaet = self.validate_ladungskapazitaet(self.spezifische_felder.get('ladungskapazitaet', None))
+                if ladungskapazitaet is not None:
+                    fahrzeug = LKW(self.id_counter, marke, modell, baujahr, kilometerstand, 0, ladungskapazitaet)
+            elif typ == "Motorrad":
+                hubraum = self.validate_hubraum(self.spezifische_felder.get('hubraum', None))
+                if hubraum is not None:
+                    fahrzeug = Motorrad(self.id_counter, marke, modell, baujahr, kilometerstand, hubraum)
+            elif typ == "Fahrrad":
+                ganganzahl = self.validate_ganganzahl(self.spezifische_felder.get('ganganzahl', None))
+                if ganganzahl is not None:
+                    fahrzeug = Fahrrad(self.id_counter, marke, modell, baujahr, kilometerstand, ganganzahl)
 
+            # Fahrzeug zur Liste hinzufügen und Erfolgsmeldung anzeigen
+            if fahrzeug:
+                self.fuhrpark.append(fahrzeug)
+                self.id_counter += 1
+                messagebox.showinfo("Erfolg", f"Fahrzeug ID {fahrzeug.id} hinzugefügt!")
+
+                # Eingabefelder leeren
+                self.marke_entry.delete(0, tk.END)
+                self.modell_entry.delete(0, tk.END)
+                self.baujahr_entry.delete(0, tk.END)
+                self.kilometerstand_entry.delete(0, tk.END)
+                for feld in self.spezifische_felder.values():
+                    feld.delete(0, tk.END)
+            else:
+                messagebox.showerror("Fehler", "Ungültige spezifische Werte für den Fahrzeugtyp.")
+        else:
+            messagebox.showerror("Fehler", "Ungültige Eingabewerte.")
+
+    def validate_baujahr(self, input_baujahr):
+        pattern = r"^\d{4}$"
+        if re.match(pattern, input_baujahr):
+            return int(input_baujahr)
+        else:
+            messagebox.showerror("Fehler", "Ungültiges Baujahr.")
+            return None
+
+    def validate_kilometerstand(self, input_kilometerstand):
         try:
-            baujahr = int(baujahr)
-            kmstand = float(kmstand)
+            kilometerstand = float(input_kilometerstand)
+            if kilometerstand >= 0:
+                return kilometerstand
+            else:
+                messagebox.showerror("Fehler", "Kilometerstand muss eine nicht-negative Zahl sein.")
+                return None
         except ValueError:
-            messagebox.showwarning("Fehler", "Ungültige Eingabe für Baujahr oder Kilometerstand.")
-            return
+            messagebox.showerror("Fehler", "Ungültiger Kilometerstand.")
+            return None
 
-        # Erstelle Fahrzeug basierend auf dem ausgewählten Typ
-        if typ == "PKW":
-            try:
-                anzahl_tueren = int(self.spezifische_felder['anzahl_tueren'].get())
-                fahrzeug = PKW("123", marke, modell, baujahr, kmstand, None, anzahl_tueren)
-            except ValueError:
-                messagebox.showwarning("Fehler", "Ungültige Eingabe für Anzahl Türen.")
-                return
-        elif typ == "LKW":
-            try:
-                ladungskapazitaet = float(self.spezifische_felder['ladungskapazitaet'].get())
-                fahrzeug = LKW("123", marke, modell, baujahr, kmstand, None, ladungskapazitaet)
-            except ValueError:
-                messagebox.showwarning("Fehler", "Ungültige Eingabe für Ladungskapazität.")
-                return
-        elif typ == "Motorrad":
-            try:
-                hubraum = int(self.spezifische_felder['hubraum'].get())
-                fahrzeug = Motorrad("123", marke, modell, baujahr, kmstand, hubraum)
-            except ValueError:
-                messagebox.showwarning("Fehler", "Ungültige Eingabe für Hubraum.")
-                return
-        elif typ == "Fahrrad":
-            try:
-                ganganzahl = int(self.spezifische_felder['ganganzahl'].get())
-                fahrzeug = Fahrrad("123", marke, modell, baujahr, kmstand, ganganzahl)
-            except ValueError:
-                messagebox.showwarning("Fehler", "Ungültige Eingabe für Anzahl Gänge.")
-                return
+    def validate_anzahl_tueren(self, input_anzahl_tueren):
+        try:
+            anzahl_tueren = int(input_anzahl_tueren.get())
+            if anzahl_tueren >= 0:
+                return anzahl_tueren
+            else:
+                messagebox.showerror("Fehler", "Anzahl Türen muss eine nicht-negative ganze Zahl sein.")
+                return None
+        except ValueError:
+            messagebox.showerror("Fehler", "Ungültige Anzahl Türen.")
+            return None
 
-        # Hier könnte die Logik für das Hinzufügen des Fahrzeugs zur Liste oder Datenbank stehen
-        print(fahrzeug.__dict__)
-        messagebox.showinfo("Erfolg", f"Fahrzeug {marke} {modell} erfolgreich hinzugefügt.")
-        self.clear_input_fields()
+    def validate_ladungskapazitaet(self, input_ladungskapazitaet):
+        try:
+            ladungskapazitaet = float(input_ladungskapazitaet.get())
+            if ladungskapazitaet >= 0:
+                return ladungskapazitaet
+            else:
+                messagebox.showerror("Fehler", "Ladungskapazität muss eine nicht-negative Zahl sein.")
+                return None
+        except ValueError:
+            messagebox.showerror("Fehler", "Ungültige Ladungskapazität.")
+            return None
 
-    def clear_input_fields(self):
-        self.marke_entry.delete(0, tk.END)
-        self.modell_entry.delete(0, tk.END)
-        self.baujahr_entry.delete(0, tk.END)
-        self.kmstand_entry.delete(0, tk.END)
+    def validate_hubraum(self, input_hubraum):
+        try:
+            hubraum = float(input_hubraum.get())
+            if hubraum >= 0:
+                return hubraum
+            else:
+                messagebox.showerror("Fehler", "Hubraum muss eine nicht-negative Zahl sein.")
+                return None
+        except ValueError:
+            messagebox.showerror("Fehler", "Ungültiger Hubraum.")
+            return None
+
+    def validate_ganganzahl(self, input_ganganzahl):
+        try:
+            ganganzahl = int(input_ganganzahl.get())
+            if ganganzahl >= 0:
+                return ganganzahl
+            else:
+                messagebox.showerror("Fehler", "Ganganzahl muss eine nicht-negative ganze Zahl sein.")
+                return None
+        except ValueError:
+            messagebox.showerror("Fehler", "Ungültige Ganganzahl.")
+            return None
+
+    def tanken_dialog(self):
+        tanken_window = tk.Toplevel(self.root)
+        tanken_window.title("Tanken")
+        tanken_window.protocol("WM_DELETE_WINDOW", lambda: self.clear_window(tanken_window))
+
+
+        tk.Label(tanken_window, text="Fahrzeug auswählen:").grid(row=0, column=0, columnspan=2)
+
+        fahrzeuge_listbox = tk.Listbox(tanken_window, height=15, width=40)  # Setze die Höhe der Listbox auf 10
+        fahrzeuge_listbox.grid(row=1, column=0, columnspan=2)
+        for f in self.fuhrpark:
+            fahrzeuge_listbox.insert(tk.END,
+                                     f"ID: {f.id} | Marke: {f.marke} | Modell: {f.modell} | Typ: {type(f).__name__}")
+
+        tk.Label(tanken_window, text="Liter:").grid(row=2, column=0)
+        liter_entry = tk.Entry(tanken_window)
+        liter_entry.grid(row=2, column=1)
+
+        tk.Label(tanken_window, text="Tankart:").grid(row=3, column=0)
+        tankart_var = tk.StringVar()
+        tankart_var.set("Benzin")
+        tk.OptionMenu(tanken_window, tankart_var, "Benzin", "Diesel").grid(row=3, column=1)
+
+        def tanken_fahrzeug():
+            try:
+                fahrzeug_id = int(fahrzeuge_listbox.get(fahrzeuge_listbox.curselection()).split()[1])
+                liter = float(liter_entry.get())
+                art = tankart_var.get()
+                fahrzeug = next((f for f in self.fuhrpark if f.id == fahrzeug_id), None)
+                if fahrzeug:
+                    fahrzeug.tanken(liter, art)
+                    messagebox.showinfo("Erfolg", f"Fahrzeug ID {fahrzeug_id} hat {liter} Liter {art} getankt.")
+                    tanken_window.destroy()
+                else:
+                    messagebox.showerror("Fehler", "Fahrzeug ID nicht gefunden.")
+            except IndexError:
+                messagebox.showerror("Fehler", "Bitte wählen Sie ein Fahrzeug aus der Liste aus.")
+            except ValueError:
+                messagebox.showerror("Fehler", "Bitte geben Sie gültige Werte ein.")
+
+        tk.Button(tanken_window, text="Tanken", command=tanken_fahrzeug).grid(row=4, column=0, columnspan=2, pady=10)
 
     def alle_fahrzeuge_anzeigen(self):
-        # Hier könnte die Logik für das Anzeigen aller Fahrzeuge stehen
-        pass
+        if not self.fuhrpark:
+            messagebox.showinfo("Alle Fahrzeuge", "Keine Fahrzeuge vorhanden.")
+            return
+
+        fahrzeuge_liste = "\n\n".join([
+            f"ID: {f.id} | Marke: {f.marke} | Modell: {f.modell} | Baujahr: {f.baujahr} | Kilometerstand: {f.kilometerstand} | Kraftstoffstand: {getattr(f, 'kraftstoffstand', 'N/A')} | Typ: {type(f).__name__}"
+            for f in self.fuhrpark])
+
+        messagebox.showinfo("Alle Fahrzeuge", fahrzeuge_liste)
+
+    def treibstoff_statistik_anzeigen(self):
+        if not self.fuhrpark:
+            messagebox.showinfo("Treibstoffstatistik", "Keine Fahrzeuge vorhanden.")
+            return
+
+        heute = datetime.datetime.now()
+        anfang_des_monats = heute.replace(day=1)
+
+        statistik_benzin = 0
+        statistik_diesel = 0
+        for f in self.fuhrpark:
+            if isinstance(f, (PKW, LKW, Motorrad)):
+                for datum, liter, art in f.tankungen:
+                    if datum >= anfang_des_monats:
+                        if art == "Benzin":
+                            statistik_benzin += liter
+                        elif art == "Diesel":
+                            statistik_diesel += liter
+
+        monat_jahr = heute.strftime("%B %Y")
+        statistik = f"Total getankt im aktuellen Monat ({monat_jahr}):\nBenzin: {statistik_benzin} Liter\nDiesel: {statistik_diesel} Liter"
+        messagebox.showinfo("Treibstoffstatistik", statistik)
+
+    def filtern(self):
+        typ = self.filter_typ_var.get()
+        if typ == "Alle":
+            gefilterte_fahrzeuge = self.fuhrpark
+        else:
+            klassen = {"PKW": PKW, "LKW": LKW, "Motorrad": Motorrad, "Fahrrad": Fahrrad}
+            gefilterte_fahrzeuge = [f for f in self.fuhrpark if isinstance(f, klassen[typ])]
+
+        if not gefilterte_fahrzeuge:
+            messagebox.showinfo(f"Fahrzeuge: {typ}", f"Keine Fahrzeuge des Typs {typ} vorhanden.")
+            return
+
+        fahrzeuge_liste = "\n".join([
+            f"ID: {f.id}, {f.marke} {f.modell}, Baujahr: {f.baujahr}, Kilometerstand: {f.kilometerstand}, Kraftstoffstand: {getattr(f, 'kraftstoffstand', 'N/A')} | Typ: {type(f).__name__}"
+            for f in gefilterte_fahrzeuge])
+
+        messagebox.showinfo(f"Fahrzeuge: {typ}", fahrzeuge_liste)
 
 
 if __name__ == "__main__":
