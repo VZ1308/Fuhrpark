@@ -218,10 +218,9 @@ class FahrzeugVerwaltungGUI:
         tanken_window.title("Tanken")
         tanken_window.protocol("WM_DELETE_WINDOW", lambda: self.clear_window(tanken_window))
 
-
         tk.Label(tanken_window, text="Fahrzeug auswählen:").grid(row=0, column=0, columnspan=2)
 
-        fahrzeuge_listbox = tk.Listbox(tanken_window, height=15, width=40)  # Setze die Höhe der Listbox auf 10
+        fahrzeuge_listbox = tk.Listbox(tanken_window, height=15, width=40)
         fahrzeuge_listbox.grid(row=1, column=0, columnspan=2)
         for f in self.fuhrpark:
             fahrzeuge_listbox.insert(tk.END,
@@ -236,23 +235,27 @@ class FahrzeugVerwaltungGUI:
         tankart_var.set("Benzin")
         tk.OptionMenu(tanken_window, tankart_var, "Benzin", "Diesel").grid(row=3, column=1)
 
+        # Funktion zum Tanken eines ausgewählten Fahrzeugs
         def tanken_fahrzeug():
             try:
-                fahrzeug_id = int(fahrzeuge_listbox.get(fahrzeuge_listbox.curselection()).split()[1])
-                liter = float(liter_entry.get())
-                art = tankart_var.get()
-                fahrzeug = next((f for f in self.fuhrpark if f.id == fahrzeug_id), None)
-                if fahrzeug:
-                    fahrzeug.tanken(liter, art)
-                    messagebox.showinfo("Erfolg", f"Fahrzeug ID {fahrzeug_id} hat {liter} Liter {art} getankt.")
-                    tanken_window.destroy()
+                # Prüfen, ob ein Fahrzeug ausgewählt wurde
+                if fahrzeuge_listbox.curselection():
+                    fahrzeug_id = int(fahrzeuge_listbox.get(fahrzeuge_listbox.curselection()).split()[1])
+                    liter = float(liter_entry.get())
+                    art = tankart_var.get()
+                    fahrzeug = next((f for f in self.fuhrpark if f.id == fahrzeug_id), None)
+                    if fahrzeug:
+                        fahrzeug.tanken(liter, art)
+                        messagebox.showinfo("Erfolg", f"Fahrzeug ID {fahrzeug_id} hat {liter} Liter {art} getankt.")
+                        tanken_window.destroy()
+                    else:
+                        messagebox.showerror("Fehler", "Fahrzeug ID nicht gefunden.")
                 else:
-                    messagebox.showerror("Fehler", "Fahrzeug ID nicht gefunden.")
-            except IndexError:
-                messagebox.showerror("Fehler", "Bitte wählen Sie ein Fahrzeug aus der Liste aus.")
+                    messagebox.showerror("Fehler", "Bitte wählen Sie ein Fahrzeug aus der Liste aus.")
             except ValueError:
                 messagebox.showerror("Fehler", "Bitte geben Sie gültige Werte ein.")
 
+        # Button zum Auslösen des Tankvorgangs
         tk.Button(tanken_window, text="Tanken", command=tanken_fahrzeug).grid(row=4, column=0, columnspan=2, pady=10)
 
     def alle_fahrzeuge_anzeigen(self):
